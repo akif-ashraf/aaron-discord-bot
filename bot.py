@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-DB_PATH = "data.db"
-JUDGE_ROLE = "Judge"
-GUILD_ID = 1467071917381914749
-GUILD = discord.Object(id=GUILD_ID)
+DB_PATH = os.getenv("DB_PATH", "data.db")
+JUDGE_ROLE = os.getenv("JUDGE_ROLE", "Judge")
+_guild_id_env = os.getenv("GUILD_ID")
+GUILD_ID = int(_guild_id_env) if _guild_id_env else None
+GUILD = discord.Object(id=GUILD_ID) if GUILD_ID else None
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -267,9 +268,14 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
 @bot.event
 async def on_ready():
     init_db()
-    bot.tree.copy_global_to(guild=GUILD)
-    synced = await bot.tree.sync(guild=GUILD)
-    print(f"✅ {bot.user} is online — synced {len(synced)} commands to guild {GUILD_ID}", flush=True)
+    if GUILD is not None:
+        bot.tree.copy_global_to(guild=GUILD)
+        synced = await bot.tree.sync(guild=GUILD)
+        scope = f"to guild {GUILD_ID}"
+    else:
+        synced = await bot.tree.sync()
+        scope = "globally"
+    print(f"✅ {bot.user} is online — synced {len(synced)} commands {scope}", flush=True)
 
 
 bot.run(TOKEN)
